@@ -9,40 +9,44 @@ $error = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-    $email = $_POST["email"];
+    $email = trim($_POST["email"]);
     $password = $_POST["password"];
 
-    $sql = "SELECT * FROM admins WHERE email = ? AND password = ? AND status = 'active'";
+    $sql = "SELECT * FROM admins WHERE email = ? AND status = 'active' LIMIT 1";
 
     $stmt = mysqli_prepare($conn, $sql);
 
     if ($stmt) {
 
-        mysqli_stmt_bind_param($stmt, "ss", $email, $password);
+        mysqli_stmt_bind_param($stmt, "s", $email);
         mysqli_stmt_execute($stmt);
 
         $result = mysqli_stmt_get_result($stmt);
 
-        if (mysqli_num_rows($result) == 1) {
+        if ($admin = mysqli_fetch_assoc($result)) {
 
-            $admin = mysqli_fetch_assoc($result);
+            if (password_verify($password, $admin["password"])) {
 
-            $_SESSION["admin_id"] = $admin["id"];
-            $_SESSION["admin_name"] = $admin["name"];
-            $_SESSION["admin_email"] = $admin["email"];
+                session_regenerate_id(true);
 
-            header("Location: dashboard.php");
-            exit();
+                $_SESSION["admin_id"] = $admin["id"];
+                $_SESSION["admin_name"] = $admin["name"];
+                $_SESSION["admin_email"] = $admin["email"];
+
+                header("Location: dashboard.php");
+                exit();
+
+            } else {
+                $error = "Invalid email or password.";
+            }
 
         } else {
-
             $error = "Invalid email or password.";
         }
 
         mysqli_stmt_close($stmt);
 
     } else {
-
         $error = "Database query error.";
     }
 }
@@ -121,7 +125,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         <?php
         if ($error != "") {
-            echo "<p class='error'>$error</p>";
+            echo "<p class='error'>" . htmlspecialchars($error) . "</p>";
         }
         ?>
 
