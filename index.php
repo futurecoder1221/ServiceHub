@@ -19,10 +19,18 @@ session_start();
             font-family: Arial, sans-serif;
         }
 
-        body {
-            background: #f8f9fc;
-            color: #222;
-        }
+        html,
+body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+body {
+    background: #f8f9fc;
+    color: #222;
+}
+    
 
         /* Navbar */
         nav {
@@ -239,27 +247,124 @@ session_start();
         }
 
         /* Responsive */
-        @media (max-width: 800px) {
-            nav {
-                flex-direction: column;
-                gap: 15px;
-            }
+       /* Responsive */
+@media (max-width: 800px) {
 
-            nav ul {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
+    nav {
+        padding: 15px 5%;
+        flex-direction: column;
+        gap: 15px;
+    }
 
-            .hero h1 {
-                font-size: 38px;
-            }
+    .logo {
+        font-size: 26px;
+    }
 
-            .features,
-            .services,
-            .steps {
-                grid-template-columns: 1fr;
-            }
-        }
+    nav ul {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px 16px;
+    }
+
+    nav ul li a {
+        font-size: 15px;
+    }
+
+    .login-btn,
+    .admin-btn {
+        padding: 7px 12px;
+    }
+
+    .hero {
+        min-height: auto;
+        padding: 60px 6%;
+        text-align: center;
+    }
+
+    .hero-content {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .hero h1 {
+        font-size: 36px;
+        line-height: 1.2;
+    }
+
+    .hero p {
+        font-size: 17px;
+        line-height: 1.6;
+    }
+
+    .hero-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .hero-buttons a {
+        width: 100%;
+        max-width: 280px;
+        margin-right: 0;
+        text-align: center;
+    }
+
+    .section {
+        padding: 50px 6%;
+    }
+
+    .section h2 {
+        font-size: 28px;
+    }
+
+    .section-intro {
+        font-size: 16px;
+        line-height: 1.6;
+        margin-bottom: 30px;
+    }
+
+    .features,
+    .services,
+    .steps {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .feature-card,
+    .service-card {
+        padding: 25px 20px;
+    }
+
+    footer {
+        padding: 22px 15px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .hero h1 {
+        font-size: 31px;
+    }
+
+    .hero p {
+        font-size: 16px;
+    }
+
+    nav ul {
+        gap: 10px 12px;
+    }
+
+    nav ul li a {
+        font-size: 14px;
+    }
+
+    .section h2 {
+        font-size: 26px;
+    }
+}
     </style>
 </head>
 
