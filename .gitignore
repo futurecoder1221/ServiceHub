@@ -1,2 +1,21 @@
+
 # Local database backup - may contain user/admin data
 database/servicehub_db.sql
+
+# Database connection credentials
+includes/db_connect.php
+
+# Environment files
+.env
+.env.*
+
+# Editor settings
+.vscode/
+
+# Temporary files
+*.log
+*.tmp
+
+# Dependencies
+vendor/
+node_modules/

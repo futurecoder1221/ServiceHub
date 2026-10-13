@@ -1,17 +1,21 @@
-```php
+
 <?php
 session_start();
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>ServiceHub | Professional Services</title>
 
     <style>
+
         * {
             margin: 0;
             padding: 0;
@@ -20,73 +24,19 @@ session_start();
         }
 
         html,
-body {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden;
-}
-
-body {
-    background: #f8f9fc;
-    color: #222;
-}
-    
-
-        /* Navbar */
-        nav {
-            background: #111827;
-            padding: 18px 7%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
         }
 
-        .logo {
-            color: white;
-            font-size: 28px;
-            font-weight: bold;
-        }
-
-        .logo span {
-            color: #38bdf8;
-        }
-
-        nav ul {
-            list-style: none;
-            display: flex;
-            gap: 28px;
-            align-items: center;
-        }
-
-        nav ul li a {
-            color: white;
-            text-decoration: none;
-            font-size: 16px;
-        }
-
-        nav ul li a:hover {
-            color: #38bdf8;
-        }
-
-        .login-btn {
-            border: 1px solid #38bdf8;
-            padding: 9px 18px;
-            border-radius: 6px;
-        }
-
-        /* Admin Login Button */
-        .admin-btn {
-            border: 1px solid #94a3b8;
-            padding: 9px 18px;
-            border-radius: 6px;
-        }
-
-        .admin-btn:hover {
-            color: #38bdf8;
-            border-color: #38bdf8;
+        body {
+            background: #f8f9fc;
+            color: #222;
         }
 
         /* Hero */
+
         .hero {
             min-height: 560px;
             display: flex;
@@ -136,6 +86,7 @@ body {
         }
 
         /* Why Choose Us */
+
         .section {
             padding: 70px 7%;
             text-align: center;
@@ -179,6 +130,7 @@ body {
         }
 
         /* Services */
+
         .services-section {
             background: #f1f5f9;
         }
@@ -214,6 +166,7 @@ body {
         }
 
         /* How It Works */
+
         .steps {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -239,6 +192,7 @@ body {
         }
 
         /* Footer */
+
         footer {
             background: #111827;
             color: white;
@@ -247,204 +201,104 @@ body {
         }
 
         /* Responsive */
-       /* Responsive */
-@media (max-width: 800px) {
 
-    nav {
-        padding: 15px 5%;
-        flex-direction: column;
-        gap: 15px;
-    }
+        @media (max-width: 800px) {
 
-    .logo {
-        font-size: 26px;
-    }
+            .hero {
+                min-height: auto;
+                padding: 60px 6%;
+                text-align: center;
+            }
 
-    nav ul {
-        width: 100%;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 12px 16px;
-    }
+            .hero-content {
+                max-width: 100%;
+                width: 100%;
+            }
 
-    nav ul li a {
-        font-size: 15px;
-    }
+            .hero h1 {
+                font-size: 36px;
+                line-height: 1.2;
+            }
 
-    .login-btn,
-    .admin-btn {
-        padding: 7px 12px;
-    }
+            .hero p {
+                font-size: 17px;
+                line-height: 1.6;
+            }
 
-    .hero {
-        min-height: auto;
-        padding: 60px 6%;
-        text-align: center;
-    }
+            .hero-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                align-items: center;
+            }
 
-    .hero-content {
-        max-width: 100%;
-        width: 100%;
-    }
+            .hero-buttons a {
+                width: 100%;
+                max-width: 280px;
+                margin-right: 0;
+                text-align: center;
+            }
 
-    .hero h1 {
-        font-size: 36px;
-        line-height: 1.2;
-    }
+            .section {
+                padding: 50px 6%;
+            }
 
-    .hero p {
-        font-size: 17px;
-        line-height: 1.6;
-    }
+            .section h2 {
+                font-size: 28px;
+            }
 
-    .hero-buttons {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        align-items: center;
-    }
+            .section-intro {
+                font-size: 16px;
+                line-height: 1.6;
+                margin-bottom: 30px;
+            }
 
-    .hero-buttons a {
-        width: 100%;
-        max-width: 280px;
-        margin-right: 0;
-        text-align: center;
-    }
+            .features,
+            .services,
+            .steps {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
 
-    .section {
-        padding: 50px 6%;
-    }
+            .feature-card,
+            .service-card {
+                padding: 25px 20px;
+            }
 
-    .section h2 {
-        font-size: 28px;
-    }
+            footer {
+                padding: 22px 15px;
+                font-size: 14px;
+            }
+        }
 
-    .section-intro {
-        font-size: 16px;
-        line-height: 1.6;
-        margin-bottom: 30px;
-    }
+        @media (max-width: 480px) {
 
-    .features,
-    .services,
-    .steps {
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
+            .hero h1 {
+                font-size: 31px;
+            }
 
-    .feature-card,
-    .service-card {
-        padding: 25px 20px;
-    }
+            .hero p {
+                font-size: 16px;
+            }
 
-    footer {
-        padding: 22px 15px;
-        font-size: 14px;
-    }
-}
+            .section h2 {
+                font-size: 26px;
+            }
+        }
 
-@media (max-width: 480px) {
-
-    .hero h1 {
-        font-size: 31px;
-    }
-
-    .hero p {
-        font-size: 16px;
-    }
-
-    nav ul {
-        gap: 10px 12px;
-    }
-
-    nav ul li a {
-        font-size: 14px;
-    }
-
-    .section h2 {
-        font-size: 26px;
-    }
-}
     </style>
+
 </head>
 
 <body>
 
-    <!-- Navbar -->
-    <nav>
+    <!-- Common Navbar -->
 
-        <div class="logo">
-            Service<span>Hub</span>
-        </div>
-
-        <ul>
-
-            <li>
-                <a href="index.php">Home</a>
-            </li>
-
-            <li>
-                <a href="services.php">Services</a>
-            </li>
-
-            <li>
-                <a href="about.php">About</a>
-            </li>
-
-            <li>
-                <a href="#how-it-works">How It Works</a>
-            </li>
-
-            <li>
-                <a href="contact.php">Contact</a>
-            </li>
-
-
-            <?php if (isset($_SESSION["user_id"])) { ?>
-
-                <li>
-                    <a href="user/dashboard.php">
-                        Dashboard
-                    </a>
-                </li>
-
-                <li>
-                    <a href="includes/logout.php" class="login-btn">
-                        Logout
-                    </a>
-                </li>
-
-            <?php } else { ?>
-
-                <li>
-                    <a href="user/login.php" class="login-btn">
-                        Login
-                    </a>
-                </li>
-
-                <li>
-                    <a href="user/register.php">
-                        Register
-                    </a>
-                </li>
-
-            <?php } ?>
-
-
-            <!-- Admin Login -->
-
-            <li>
-                <a href="admin/admin_login.php" class="admin-btn">
-                    Admin Login
-                </a>
-            </li>
-
-        </ul>
-
-    </nav>
+    <?php require __DIR__ . "/includes/navbar.php"; ?>
 
 
     <!-- Hero Section -->
+
     <section class="hero">
 
         <div class="hero-content">
@@ -477,6 +331,7 @@ body {
 
 
     <!-- Why Choose Us -->
+
     <section class="section">
 
         <h2>Why Choose ServiceHub?</h2>
@@ -534,6 +389,7 @@ body {
 
 
     <!-- Popular Services -->
+
     <section class="section services-section">
 
         <h2>Popular Services</h2>
@@ -597,6 +453,7 @@ body {
 
 
     <!-- How It Works -->
+
     <section class="section" id="how-it-works">
 
         <h2>How It Works</h2>
@@ -651,14 +508,17 @@ body {
 
 
     <!-- Footer -->
+
     <footer>
 
         <p>
-            © 2026 ServiceHub. All Rights Reserved.
+            &copy; 2026 ServiceHub. All Rights Reserved.
         </p>
 
     </footer>
 
 </body>
+
 </html>
-```
+
+

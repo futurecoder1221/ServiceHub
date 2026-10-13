@@ -1,43 +1,70 @@
-```php
+
 <?php
 
 session_start();
 
-
-
-if (!isset($_SESSION["user_id"])) {
-    header("Location: user/login.php?redirect=../services.php");
-    exit();
-}
-
-require_once "includes/db_connect.php";
-
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-require_once "includes/db_connect.php";
+require_once __DIR__ . "/includes/db_connect.php";
 
 /** @var mysqli $conn */
 
 $message = "";
 $message_type = "";
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+$name = "";
+$email = "";
+$phone = "";
+$subject = "";
+$contact_message = "";
 
-    $name = trim($_POST["name"]);
-    $email = trim($_POST["email"]);
-    $phone = trim($_POST["phone"]);
-    $subject = trim($_POST["subject"]);
-    $contact_message = trim($_POST["message"]);
+/* SAFE OUTPUT */
 
-    if ($name == "" || $email == "" || $subject == "" || $contact_message == "") {
+function contact_e($value) {
+    return htmlspecialchars(
+        (string)($value ?? ""),
+        ENT_QUOTES,
+        "UTF-8"
+    );
+}
+
+/* CONTACT FORM SUBMISSION */
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    $name = trim($_POST["name"] ?? "");
+    $email = trim($_POST["email"] ?? "");
+    $phone = trim($_POST["phone"] ?? "");
+    $subject = trim($_POST["subject"] ?? "");
+    $contact_message = trim($_POST["message"] ?? "");
+
+    if (
+        $name === "" ||
+        $email === "" ||
+        $subject === "" ||
+        $contact_message === ""
+    ) {
 
         $message = "Please fill in all required fields.";
         $message_type = "error";
 
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+
+        $message = "Please enter a valid email address.";
+        $message_type = "error";
+
+    } elseif (
+        strlen($name) > 100 ||
+        strlen($email) > 254 ||
+        strlen($phone) > 30 ||
+        strlen($subject) > 200
+    ) {
+
+        $message = "One or more fields are too long.";
+        $message_type = "error";
+
     } else {
 
-        $sql = "INSERT INTO contacts (name, email, phone, subject, message)
+        $sql = "INSERT INTO contacts
+                (name, email, phone, subject, message)
                 VALUES (?, ?, ?, ?, ?)";
 
         $stmt = mysqli_prepare($conn, $sql);
@@ -59,10 +86,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $message = "Your message has been sent successfully!";
                 $message_type = "success";
 
+                /* CLEAR FORM AFTER SUCCESS */
+
+                $name = "";
+                $email = "";
+                $phone = "";
+                $subject = "";
+                $contact_message = "";
+
             } else {
 
                 $message = "Message could not be sent. Please try again.";
                 $message_type = "error";
+
             }
 
             mysqli_stmt_close($stmt);
@@ -71,6 +107,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             $message = "Something went wrong. Please try again.";
             $message_type = "error";
+
         }
     }
 }
@@ -82,531 +119,547 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <head>
 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
 
-    <title>Contact Us | ServiceHub</title>
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
 
-    <style>
+<title>Contact Us | ServiceHub</title>
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
+<style>
 
-        body {
-            background: #f8f9fc;
-            color: #222;
-        }
+/* GENERAL */
 
-        /* Navbar */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
 
-        nav {
-            background: #111827;
-            padding: 18px 7%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+html,
+body {
+    width: 100%;
+    max-width: 100%;
+}
 
-        .logo {
-            color: white;
-            font-size: 28px;
-            font-weight: bold;
-        }
+body {
+    background: #f8f9fc;
+    color: #222;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
 
-        .logo span {
-            color: #38bdf8;
-        }
+/* PAGE HEADER */
 
-        nav ul {
-            list-style: none;
-            display: flex;
-            gap: 28px;
-            align-items: center;
-        }
+.page-header {
+    background: linear-gradient(135deg, #eef7ff, #ffffff);
+    text-align: center;
+    padding: 70px 20px;
+}
 
-        nav ul li a {
-            color: white;
-            text-decoration: none;
-            font-size: 16px;
-        }
+.page-header h1 {
+    font-size: 45px;
+    margin-bottom: 15px;
+    color: #111827;
+}
 
-        nav ul li a:hover {
-            color: #38bdf8;
-        }
+.page-header h1 span {
+    color: #0284c7;
+}
 
-        .login-btn {
-            border: 1px solid #38bdf8;
-            padding: 9px 18px;
-            border-radius: 6px;
-        }
+.page-header p {
+    color: #64748b;
+    font-size: 18px;
+    line-height: 1.7;
+}
 
-        /* Page Header */
+/* CONTACT SECTION */
 
-        .page-header {
-            background: linear-gradient(135deg, #eef7ff, #ffffff);
-            text-align: center;
-            padding: 70px 20px;
-        }
+.contact-section {
+    padding: 70px 7%;
+}
 
-        .page-header h1 {
-            font-size: 45px;
-            margin-bottom: 15px;
-        }
+.contact-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    gap: 35px;
+    align-items: start;
+}
 
-        .page-header h1 span {
-            color: #0284c7;
-        }
+/* CONTACT INFO */
 
-        .page-header p {
-            color: #666;
-            font-size: 18px;
-        }
+.contact-info {
+    background: #111827;
+    color: white;
+    padding: 40px;
+    border-radius: 12px;
+    min-width: 0;
+}
 
-        /* Contact Section */
+.contact-info h2 {
+    font-size: 30px;
+    margin-bottom: 15px;
+}
 
-        .contact-section {
-            padding: 70px 7%;
-        }
+.contact-info > p {
+    color: #d1d5db;
+    line-height: 1.7;
+    margin-bottom: 30px;
+}
 
-        .contact-container {
-            display: grid;
-            grid-template-columns: 1fr 1.5fr;
-            gap: 35px;
-        }
+.info-item {
+    margin-bottom: 25px;
+}
 
-        /* Contact Info */
+.info-item:last-child {
+    margin-bottom: 0;
+}
 
-        .contact-info {
-            background: #111827;
-            color: white;
-            padding: 40px;
-            border-radius: 12px;
-        }
+.info-item h3 {
+    margin-bottom: 7px;
+    color: #38bdf8;
+    font-size: 16px;
+}
 
-        .contact-info h2 {
-            font-size: 30px;
-            margin-bottom: 15px;
-        }
+.info-item p {
+    color: #d1d5db;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
 
-        .contact-info > p {
-            color: #d1d5db;
-            line-height: 1.7;
-            margin-bottom: 30px;
-        }
+/* CONTACT FORM */
 
-        .info-item {
-            margin-bottom: 25px;
-        }
+.contact-form {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+    min-width: 0;
+}
 
-        .info-item h3 {
-            margin-bottom: 7px;
-            color: #38bdf8;
-        }
+.contact-form h2 {
+    font-size: 30px;
+    margin-bottom: 25px;
+    color: #0f172a;
+}
 
-        .info-item p {
-            color: #d1d5db;
-        }
+/* MESSAGES */
 
-        /* Contact Form */
+.form-message {
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin-bottom: 22px;
+    font-weight: bold;
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
 
-        .contact-form {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-        }
+.success {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
 
-        .contact-form h2 {
-            font-size: 30px;
-            margin-bottom: 25px;
-        }
+.error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
 
-        .form-message {
-            padding: 12px 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            font-weight: bold;
-        }
+/* FORM FIELDS */
 
-        .success {
-            background: #dcfce7;
-            color: #166534;
-            border: 1px solid #86efac;
-        }
+.form-group {
+    margin-bottom: 19px;
+}
 
-        .error {
-            background: #fee2e2;
-            color: #991b1b;
-            border: 1px solid #fca5a5;
-        }
+.form-group label {
+    display: block;
+    margin-bottom: 9px;
+    font-weight: bold;
+    font-size: 14px;
+    color: #334155;
+}
 
-        .form-group {
-            margin-bottom: 18px;
-        }
+.form-group input,
+.form-group textarea {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    padding: 14px 15px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 15px;
+    color: #0f172a;
+    background: white;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
 
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
+.form-group input:focus,
+.form-group textarea:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2,132,199,0.12);
+}
 
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: 13px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            font-size: 15px;
-            outline: none;
-        }
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: #94a3b8;
+}
 
-        .form-group input:focus,
-        .form-group textarea:focus {
-            border-color: #0284c7;
-        }
+.form-group textarea {
+    height: 145px;
+    resize: vertical;
+    line-height: 1.6;
+}
 
-        .form-group textarea {
-            height: 140px;
-            resize: vertical;
-        }
+/* SUBMIT BUTTON */
 
-        .submit-btn {
-            background: #0284c7;
-            color: white;
-            border: none;
-            padding: 13px 25px;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
+.submit-btn {
+    display: inline-block;
+    background: #0284c7;
+    color: white;
+    border: none;
+    padding: 14px 27px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
 
-        .submit-btn:hover {
-            background: #0369a1;
-        }
+.submit-btn:hover {
+    background: #0369a1;
+}
 
-        /* Footer */
+.submit-btn:focus-visible {
+    outline: 3px solid #38bdf8;
+    outline-offset: 3px;
+}
 
-        footer {
-            background: #111827;
-            color: white;
-            text-align: center;
-            padding: 25px;
-        }
+/* FOOTER */
 
-        /* Responsive */
+footer {
+    background: #111827;
+    color: white;
+    text-align: center;
+    padding: 25px 15px;
+    font-size: 14px;
+}
 
-        @media (max-width: 800px) {
+/* TABLET */
 
-            nav {
-                flex-direction: column;
-                gap: 15px;
-            }
+@media (max-width: 900px) {
 
-            nav ul {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
+    .contact-section {
+        padding: 50px 5%;
+    }
 
-            .contact-container {
-                grid-template-columns: 1fr;
-            }
+    .contact-container {
+        gap: 22px;
+    }
 
-            .page-header h1 {
-                font-size: 36px;
-            }
+    .contact-info,
+    .contact-form {
+        padding: 28px;
+    }
 
-        }
+}
 
-    </style>
+/* MOBILE */
+
+@media (max-width: 700px) {
+
+    .page-header {
+        padding: 48px 18px;
+    }
+
+    .page-header h1 {
+        font-size: 35px;
+    }
+
+    .page-header p {
+        font-size: 16px;
+    }
+
+    .contact-section {
+        padding: 35px 16px 50px;
+    }
+
+    .contact-container {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 22px;
+    }
+
+    .contact-info,
+    .contact-form {
+        padding: 27px 22px;
+    }
+
+    .contact-info h2,
+    .contact-form h2 {
+        font-size: 25px;
+    }
+
+    .form-group input,
+    .form-group textarea {
+        font-size: 16px;
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: 15px;
+    }
+
+}
+
+@media (max-width: 360px) {
+
+    .contact-info,
+    .contact-form {
+        padding: 24px 17px;
+    }
+
+    .page-header h1 {
+        font-size: 31px;
+    }
+
+}
+
+</style>
 
 </head>
 
 <body>
 
+<!-- COMMON NAVBAR -->
 
-    <!-- Navbar -->
-
-    <nav>
-
-        <div class="logo">
-            Service<span>Hub</span>
-        </div>
-
-        <ul>
-
-            <li>
-                <a href="index.php">Home</a>
-            </li>
-
-            <li>
-                <a href="services.php">Services</a>
-            </li>
-
-            <li>
-                <a href="about.php">About</a>
-            </li>
-
-            <li>
-                <a href="index.php#how-it-works">How It Works</a>
-            </li>
-
-            <li>
-                <a href="contact.php">Contact</a>
-            </li>
+<?php require __DIR__ . "/includes/navbar.php"; ?>
 
 
-            <?php if (isset($_SESSION["user_id"])) { ?>
+<!-- PAGE HEADER -->
 
-                <li>
-                    <a href="user/dashboard.php">
-                        Dashboard
-                    </a>
-                </li>
+<section class="page-header">
 
-                <li>
-                    <a href="includes/logout.php" class="login-btn">
-                        Logout
-                    </a>
-                </li>
+    <h1>
+        Contact <span>Us</span>
+    </h1>
 
-            <?php } else { ?>
+    <p>
+        Have a question or need help? Send us a message.
+    </p>
 
-                <li>
-                    <a href="user/login.php" class="login-btn">
-                        Login
-                    </a>
-                </li>
-
-                <li>
-                    <a href="user/register.php">
-                        Register
-                    </a>
-                </li>
-
-            <?php } ?>
-
-        </ul>
-
-    </nav>
+</section>
 
 
-    <!-- Page Header -->
+<!-- CONTACT SECTION -->
 
-    <section class="page-header">
+<main class="contact-section">
 
-        <h1>
-            Contact <span>Us</span>
-        </h1>
+    <div class="contact-container">
 
-        <p>
-            Have a question or need help? Send us a message.
-        </p>
+        <!-- CONTACT INFORMATION -->
 
-    </section>
+        <div class="contact-info">
 
+            <h2>Get In Touch</h2>
 
-    <!-- Contact Section -->
+            <p>
+                We are here to help. Contact ServiceHub for questions,
+                service information or support.
+            </p>
 
-    <section class="contact-section">
+            <div class="info-item">
 
-        <div class="contact-container">
-
-
-            <!-- Contact Information -->
-
-            <div class="contact-info">
-
-                <h2>Get In Touch</h2>
+                <h3>📍 Address</h3>
 
                 <p>
-                    We are here to help. Contact ServiceHub for questions,
-                    service information or support.
+                    ServiceHub Office, Lahore, Pakistan
                 </p>
-
-                <div class="info-item">
-
-                    <h3>📍 Address</h3>
-
-                    <p>
-                        ServiceHub Office, Lahore, Pakistan
-                    </p>
-
-                </div>
-
-
-                <div class="info-item">
-
-                    <h3>📧 Email</h3>
-
-                    <p>
-                        support@servicehub.com
-                    </p>
-
-                </div>
-
-
-                <div class="info-item">
-
-                    <h3>📞 Phone</h3>
-
-                    <p>
-                        +92 300 1234567
-                    </p>
-
-                </div>
-
-
-                <div class="info-item">
-
-                    <h3>🕐 Working Hours</h3>
-
-                    <p>
-                        Monday - Friday | 9:00 AM - 6:00 PM
-                    </p>
-
-                </div>
 
             </div>
 
+            <div class="info-item">
 
-            <!-- Contact Form -->
+                <h3>📧 Email</h3>
 
-            <div class="contact-form">
+                <p>
+                    support@servicehub.com
+                </p>
 
-                <h2>Send a Message</h2>
+            </div>
 
+            <div class="info-item">
 
-                <?php if ($message != "") { ?>
+                <h3>📞 Phone</h3>
 
-                    <div class="form-message <?php echo $message_type; ?>">
+                <p>
+                    +92 300 1234567
+                </p>
 
-                        <?php echo htmlspecialchars($message); ?>
+            </div>
 
-                    </div>
+            <div class="info-item">
 
-                <?php } ?>
+                <h3>🕐 Working Hours</h3>
 
-
-                <form action="contact.php" method="POST">
-
-                    <div class="form-group">
-
-                        <label for="name">
-                            Full Name
-                        </label>
-
-                        <input
-                            type="text"
-                            id="name"
-                            name="name"
-                            placeholder="Enter your name"
-                            value="<?php echo isset($_POST["name"]) ? htmlspecialchars($_POST["name"]) : ""; ?>"
-                            required
-                        >
-
-                    </div>
-
-
-                    <div class="form-group">
-
-                        <label for="email">
-                            Email Address
-                        </label>
-
-                        <input
-                            type="email"
-                            id="email"
-                            name="email"
-                            placeholder="Enter your email"
-                            value="<?php echo isset($_POST["email"]) ? htmlspecialchars($_POST["email"]) : ""; ?>"
-                            required
-                        >
-
-                    </div>
-
-
-                    <div class="form-group">
-
-                        <label for="phone">
-                            Phone Number
-                        </label>
-
-                        <input
-                            type="text"
-                            id="phone"
-                            name="phone"
-                            placeholder="Enter your phone number"
-                            value="<?php echo isset($_POST["phone"]) ? htmlspecialchars($_POST["phone"]) : ""; ?>"
-                        >
-
-                    </div>
-
-
-                    <div class="form-group">
-
-                        <label for="subject">
-                            Subject
-                        </label>
-
-                        <input
-                            type="text"
-                            id="subject"
-                            name="subject"
-                            placeholder="Enter subject"
-                            value="<?php echo isset($_POST["subject"]) ? htmlspecialchars($_POST["subject"]) : ""; ?>"
-                            required
-                        >
-
-                    </div>
-
-
-                    <div class="form-group">
-
-                        <label for="message">
-                            Message
-                        </label>
-
-                        <textarea
-                            id="message"
-                            name="message"
-                            placeholder="Write your message..."
-                            required
-                        ><?php echo isset($_POST["message"]) ? htmlspecialchars($_POST["message"]) : ""; ?></textarea>
-
-                    </div>
-
-
-                    <button type="submit" class="submit-btn">
-                        Send Message
-                    </button>
-
-                </form>
+                <p>
+                    Monday - Friday | 9:00 AM - 6:00 PM
+                </p>
 
             </div>
 
         </div>
 
-    </section>
+
+        <!-- CONTACT FORM -->
+
+        <div class="contact-form">
+
+            <h2>Send a Message</h2>
+
+            <?php if ($message !== ""): ?>
+
+                <div
+                    class="form-message <?php echo contact_e($message_type); ?>"
+                    role="alert"
+                >
+                    <?php echo contact_e($message); ?>
+                </div>
+
+            <?php endif; ?>
+
+            <form action="contact.php" method="POST">
+
+                <!-- NAME -->
+
+                <div class="form-group">
+
+                    <label for="name">
+                        Full Name
+                    </label>
+
+                    <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        placeholder="Enter your name"
+                        value="<?php echo contact_e($name); ?>"
+                        maxlength="100"
+                        autocomplete="name"
+                        required
+                    >
+
+                </div>
+
+                <!-- EMAIL -->
+
+                <div class="form-group">
+
+                    <label for="email">
+                        Email Address
+                    </label>
+
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="Enter your email"
+                        value="<?php echo contact_e($email); ?>"
+                        maxlength="254"
+                        autocomplete="email"
+                        required
+                    >
+
+                </div>
+
+                <!-- PHONE -->
+
+                <div class="form-group">
+
+                    <label for="phone">
+                        Phone Number
+                    </label>
+
+                    <input
+                        type="tel"
+                        id="phone"
+                        name="phone"
+                        placeholder="Enter your phone number"
+                        value="<?php echo contact_e($phone); ?>"
+                        maxlength="30"
+                        autocomplete="tel"
+                    >
+
+                </div>
+
+                <!-- SUBJECT -->
+
+                <div class="form-group">
+
+                    <label for="subject">
+                        Subject
+                    </label>
+
+                    <input
+                        type="text"
+                        id="subject"
+                        name="subject"
+                        placeholder="Enter subject"
+                        value="<?php echo contact_e($subject); ?>"
+                        maxlength="200"
+                        required
+                    >
+
+                </div>
+
+                <!-- MESSAGE -->
+
+                <div class="form-group">
+
+                    <label for="message">
+                        Message
+                    </label>
+
+                    <textarea
+                        id="message"
+                        name="message"
+                        placeholder="Write your message..."
+                        required
+                    ><?php echo contact_e($contact_message); ?></textarea>
+
+                </div>
+
+                <!-- SUBMIT -->
+
+                <button type="submit" class="submit-btn">
+                    Send Message
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</main>
 
 
-    <!-- Footer -->
+<!-- FOOTER -->
 
-    <footer>
+<footer>
 
-        <p>
-            © 2026 ServiceHub. All Rights Reserved.
-        </p>
+    <p>
+        &copy; 2026 ServiceHub. All Rights Reserved.
+    </p>
 
-    </footer>
-
+</footer>
 
 </body>
 
 </html>
-```
 

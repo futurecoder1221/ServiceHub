@@ -1,470 +1,706 @@
+
 <?php
-require_once "../includes/check_login.php";
-require_once "../includes/db_connect.php";
+
+require_once __DIR__ . "/../includes/check_login.php";
+require_once __DIR__ . "/../includes/db_connect.php";
 
 /** @var mysqli $conn */
 
-$user_id = $_SESSION["user_id"];
+function dashboard_e($value) {
+    return htmlspecialchars(
+        (string)($value ?? ""),
+        ENT_QUOTES,
+        "UTF-8"
+    );
+}
 
+$user_id = (int) $_SESSION["user_id"];
+$user_name = $_SESSION["user_name"] ?? "User";
 
-/* TOTAL BOOKINGS */
+/* GET USER BOOKINGS */
 
-$total_sql = "SELECT COUNT(*) AS total 
-              FROM bookings 
-              WHERE user_id = ?";
+$bookings = [];
 
-$total_stmt = mysqli_prepare($conn, $total_sql);
-mysqli_stmt_bind_param($total_stmt, "i", $user_id);
-mysqli_stmt_execute($total_stmt);
+$sql = "SELECT
+            bookings.id,
+            services.name AS service_name,
+            bookings.booking_date,
+            bookings.booking_time,
+            bookings.status
+        FROM bookings
+        LEFT JOIN services
+            ON bookings.service_id = services.id
+        WHERE bookings.user_id = ?
+        ORDER BY bookings.id DESC";
 
-$total_result = mysqli_stmt_get_result($total_stmt);
-$total_row = mysqli_fetch_assoc($total_result);
+$stmt = mysqli_prepare($conn, $sql);
 
-$total_bookings = $total_row["total"];
+if ($stmt) {
 
+    mysqli_stmt_bind_param($stmt, "i", $user_id);
+    mysqli_stmt_execute($stmt);
 
-/* PENDING BOOKINGS */
+    $result = mysqli_stmt_get_result($stmt);
 
-$pending_sql = "SELECT COUNT(*) AS total 
-                FROM bookings 
-                WHERE user_id = ? 
-                AND status = 'Pending'";
+    if ($result) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $bookings[] = $row;
+        }
+    }
 
-$pending_stmt = mysqli_prepare($conn, $pending_sql);
-mysqli_stmt_bind_param($pending_stmt, "i", $user_id);
-mysqli_stmt_execute($pending_stmt);
+    mysqli_stmt_close($stmt);
+}
 
-$pending_result = mysqli_stmt_get_result($pending_stmt);
-$pending_row = mysqli_fetch_assoc($pending_result);
+/* BOOKING COUNTS */
 
-$pending_bookings = $pending_row["total"];
+$total_bookings = count($bookings);
+$pending_bookings = 0;
+$completed_bookings = 0;
 
+foreach ($bookings as $booking) {
 
-/* COMPLETED BOOKINGS */
+    $status = strtolower(
+        trim((string)($booking["status"] ?? ""))
+    );
 
-$completed_sql = "SELECT COUNT(*) AS total 
-                  FROM bookings 
-                  WHERE user_id = ? 
-                  AND status = 'Completed'";
+    if ($status === "pending") {
+        $pending_bookings++;
+    }
 
-$completed_stmt = mysqli_prepare($conn, $completed_sql);
-mysqli_stmt_bind_param($completed_stmt, "i", $user_id);
-mysqli_stmt_execute($completed_stmt);
+    if ($status === "completed") {
+        $completed_bookings++;
+    }
+}
 
-$completed_result = mysqli_stmt_get_result($completed_stmt);
-$completed_row = mysqli_fetch_assoc($completed_result);
+/* STATUS CSS CLASS */
 
-$completed_bookings = $completed_row["total"];
+function dashboard_status_class($status) {
 
+    $status = strtolower(trim((string)$status));
 
-/* MY BOOKINGS */
+    $allowed = [
+        "pending",
+        "confirmed",
+        "completed",
+        "cancelled"
+    ];
 
-$booking_sql = "SELECT 
-                    bookings.id,
-                    services.name AS service_name,
-                    bookings.booking_date,
-                    bookings.booking_time,
-                    bookings.status
-                FROM bookings
-                LEFT JOIN services 
-                    ON bookings.service_id = services.id
-                WHERE bookings.user_id = ?
-                ORDER BY bookings.id DESC";
+    return in_array($status, $allowed, true)
+        ? "status-" . $status
+        : "";
+}
 
-$stmt = mysqli_prepare($conn, $booking_sql);
-
-mysqli_stmt_bind_param($stmt, "i", $user_id);
-
-mysqli_stmt_execute($stmt);
-
-$result = mysqli_stmt_get_result($stmt);
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
 
-    <title>ServiceHub - Dashboard</title>
+<meta charset="UTF-8">
 
-    <style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        * {
-            box-sizing: border-box;
-        }
+<title>User Dashboard | ServiceHub</title>
 
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f6f8;
-            margin: 0;
-            color: #222;
-        }
+<style>
 
-        /* NAVBAR */
+/* GENERAL */
 
-        .navbar {
-            background-color: #222;
-            color: white;
-            padding: 18px 6%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-        .logo {
-            font-size: 24px;
-            font-weight: bold;
-        }
+html,
+body {
+    width: 100%;
+    max-width: 100%;
+}
 
-        .nav-right {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+body {
+    font-family: Arial, sans-serif;
+    background: #f1f5f9;
+    color: #1e293b;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
 
-        .dashboard-text {
-            font-size: 14px;
-            color: #ddd;
-        }
+/* MAIN */
 
-        .logout {
-            color: white;
-            text-decoration: none;
-            background-color: #e74c3c;
-            padding: 9px 17px;
-            border-radius: 6px;
-        }
+.container {
+    width: 90%;
+    max-width: 1150px;
+    margin: 35px auto 60px;
+}
 
-        .logout:hover {
-            background-color: #c0392b;
-        }
+/* WELCOME */
 
-        /* MAIN */
+.welcome {
+    background: linear-gradient(120deg, #111827, #334155);
+    color: white;
+    padding: 38px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+}
 
-        .container {
-            width: 88%;
-            max-width: 1100px;
-            margin: 35px auto;
-        }
+.welcome h1 {
+    font-size: 30px;
+    margin-bottom: 12px;
+    overflow-wrap: anywhere;
+}
 
-        /* WELCOME */
+.welcome p {
+    font-size: 15px;
+    line-height: 1.7;
+    color: #cbd5e1;
+    margin-bottom: 8px;
+}
 
-        .welcome {
-            background: linear-gradient(135deg, #222, #444);
-            color: white;
-            padding: 35px;
-            border-radius: 14px;
-            margin-bottom: 25px;
-        }
+.booking-btn {
+    display: inline-block;
+    margin-top: 18px;
+    background: #0284c7;
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 15px;
+    padding: 14px 24px;
+    border-radius: 8px;
+    text-align: center;
+}
 
-        .welcome h1 {
-            margin: 0 0 10px;
-            font-size: 30px;
-        }
+.booking-btn:hover {
+    background: #0369a1;
+}
 
-        .welcome p {
-            margin: 6px 0;
-            color: #ddd;
-        }
+/* SECTION HEADINGS */
 
-        .booking-btn {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 12px 24px;
-            background-color: white;
-            color: #222;
-            text-decoration: none;
-            border-radius: 7px;
-            font-weight: bold;
-        }
+.section-heading {
+    margin-bottom: 20px;
+}
 
-        .booking-btn:hover {
-            background-color: #eee;
-        }
+.section-heading h2 {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
 
-        /* SUMMARY CARDS */
+.section-heading p {
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.6;
+}
 
-        .cards {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-bottom: 30px;
-        }
+/* SUMMARY CARDS */
 
-        .card {
-            background-color: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        }
+.cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    margin-bottom: 35px;
+}
 
-        .card h3 {
-            margin: 0 0 10px;
-            color: #666;
-            font-size: 15px;
-        }
+.card {
+    background: white;
+    padding: 27px;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    min-width: 0;
+}
 
-        .card-number {
-            font-size: 32px;
-            font-weight: bold;
-            color: #222;
-        }
+.card-icon {
+    font-size: 27px;
+    margin-bottom: 15px;
+}
 
-        /* BOOKINGS */
+.card h3 {
+    font-size: 16px;
+    color: #64748b;
+    margin-bottom: 12px;
+}
 
-        .section-title {
-            font-size: 23px;
-            margin-bottom: 15px;
-        }
+.card-number {
+    font-size: 34px;
+    font-weight: bold;
+    color: #0f172a;
+}
 
-        .booking-area {
-            background-color: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-            overflow-x: auto;
-        }
+/* BOOKINGS AREA */
 
-        .booking-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+.booking-area {
+    background: white;
+    padding: 22px;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
 
-        .booking-table th {
-            background-color: #222;
-            color: white;
-            padding: 13px;
-            text-align: left;
-        }
+/* DESKTOP TABLE */
 
-        .booking-table td {
-            padding: 13px;
-            border-bottom: 1px solid #eee;
-        }
+.booking-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
 
-        .booking-table tr:last-child td {
-            border-bottom: none;
-        }
+.booking-table th {
+    background: #111827;
+    color: white;
+    padding: 15px;
+    font-size: 14px;
+}
 
-        /* STATUS */
+.booking-table td {
+    padding: 15px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
 
-        .status {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            background-color: #fff3cd;
-            color: #856404;
-            font-size: 13px;
-            font-weight: bold;
-        }
+.booking-table tbody tr:hover {
+    background: #f8fafc;
+}
 
-        .no-booking {
-            text-align: center;
-            padding: 25px;
-            color: #777;
-        }
+.booking-table tbody tr:last-child td {
+    border-bottom: none;
+}
 
-        /* MOBILE */
+/* STATUS BADGES */
 
-        @media (max-width: 700px) {
+.status {
+    display: inline-block;
+    padding: 7px 13px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    background: #e2e8f0;
+    color: #334155;
+}
 
-            .navbar {
-                padding: 15px 20px;
-            }
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
 
-            .dashboard-text {
-                display: none;
-            }
+.status-confirmed {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
 
-            .container {
-                width: 94%;
-            }
+.status-completed {
+    background: #dcfce7;
+    color: #166534;
+}
 
-            .welcome {
-                padding: 25px;
-            }
+.status-cancelled {
+    background: #fee2e2;
+    color: #991b1b;
+}
 
-            .welcome h1 {
-                font-size: 25px;
-            }
+/* MOBILE BOOKING CARDS */
 
-            .cards {
-                grid-template-columns: 1fr;
-            }
+.mobile-bookings {
+    display: none;
+}
 
-            .booking-area {
-                overflow-x: auto;
-            }
+.mobile-booking-card {
+    background: white;
+    border: 1px solid #dbe3ee;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
 
-            .booking-table {
-                min-width: 600px;
-            }
+.mobile-booking-card:last-child {
+    margin-bottom: 0;
+}
 
-        }
+.mobile-booking-header {
+    background: #111827;
+    color: white;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
 
-    </style>
+.mobile-booking-header strong {
+    font-size: 15px;
+}
+
+.mobile-booking-header .status {
+    flex-shrink: 0;
+}
+
+.mobile-booking-details {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.mobile-booking-details th,
+.mobile-booking-details td {
+    padding: 13px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 14px;
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.mobile-booking-details th {
+    width: 34%;
+    background: #f8fafc;
+    color: #475569;
+}
+
+.mobile-booking-details td {
+    width: 66%;
+    color: #1e293b;
+}
+
+.mobile-booking-details tr:last-child th,
+.mobile-booking-details tr:last-child td {
+    border-bottom: none;
+}
+
+/* EMPTY STATE */
+
+.no-booking {
+    text-align: center;
+    padding: 30px 15px;
+    color: #64748b;
+}
+
+.no-booking p {
+    margin-bottom: 15px;
+}
+
+/* TABLET */
+
+@media (max-width: 900px) {
+
+    .cards {
+        gap: 14px;
+    }
+}
+
+/* MOBILE */
+
+@media (max-width: 600px) {
+
+    .container {
+        width: 92%;
+        margin: 24px auto 45px;
+    }
+
+    .welcome {
+        padding: 28px 22px;
+        margin-bottom: 30px;
+    }
+
+    .welcome h1 {
+        font-size: 24px;
+    }
+
+    .welcome p {
+        font-size: 14px;
+    }
+
+    .booking-btn {
+        display: block;
+        width: 100%;
+        padding: 15px;
+    }
+
+    .section-heading h2 {
+        font-size: 22px;
+    }
+
+    .cards {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        margin-bottom: 30px;
+    }
+
+    .card {
+        padding: 25px;
+    }
+
+    .booking-area {
+        padding: 15px;
+    }
+
+    /* HIDE DESKTOP TABLE */
+
+    .desktop-bookings {
+        display: none;
+    }
+
+    /* SHOW MOBILE CARDS */
+
+    .mobile-bookings {
+        display: block;
+    }
+}
+
+@media (max-width: 360px) {
+
+    .mobile-booking-details th,
+    .mobile-booking-details td {
+        padding: 11px 9px;
+        font-size: 13px;
+    }
+}
+
+</style>
 
 </head>
 
 <body>
 
+<!-- COMMON NAVBAR -->
 
-    <!-- NAVBAR -->
+<?php require __DIR__ . "/../includes/navbar.php"; ?>
 
-    <div class="navbar">
 
-        <div class="logo">
-            ServiceHub
-        </div>
+<!-- MAIN CONTENT -->
 
-        <div class="nav-right">
+<main class="container">
 
-            <span class="dashboard-text">
-                User Dashboard
-            </span>
+    <!-- WELCOME -->
 
-            <a href="../includes/logout.php" class="logout">
-                Logout
-            </a>
+    <section class="welcome">
 
-        </div>
+        <h1>
+            Welcome, <?php echo dashboard_e($user_name); ?>! 👋
+        </h1>
+
+        <p>
+            Manage your service bookings easily from your dashboard.
+        </p>
+
+        <p>
+            Choose a service and book it according to your requirements.
+        </p>
+
+        <a href="booking.php" class="booking-btn">
+            + Book a Service
+        </a>
+
+    </section>
+
+
+    <!-- SUMMARY HEADING -->
+
+    <div class="section-heading">
+
+        <h2>Booking Overview</h2>
+
+        <p>
+            Track your service requests and their progress.
+        </p>
 
     </div>
 
 
-    <!-- MAIN CONTENT -->
+    <!-- SUMMARY CARDS -->
 
-    <div class="container">
+    <section class="cards">
 
+        <div class="card">
 
-        <!-- WELCOME -->
+            <div class="card-icon">📋</div>
 
-        <div class="welcome">
+            <h3>Total Bookings</h3>
 
-            <h1>
-                Welcome to ServiceHub! 👋
-            </h1>
-
-            <p>
-                Manage your service bookings easily from your dashboard.
-            </p>
-
-            <p>
-                Choose a service and book it according to your requirements.
-            </p>
-
-            <a href="booking.php" class="booking-btn">
-                + Book a Service
-            </a>
-
-        </div>
-
-
-        <!-- SUMMARY CARDS -->
-
-        <div class="cards">
-
-            <div class="card">
-
-                <h3>
-                    Total Bookings
-                </h3>
-
-                <div class="card-number">
-                    <?php echo $total_bookings; ?>
-                </div>
-
-            </div>
-
-
-            <div class="card">
-
-                <h3>
-                    Pending
-                </h3>
-
-                <div class="card-number">
-                    <?php echo $pending_bookings; ?>
-                </div>
-
-            </div>
-
-
-            <div class="card">
-
-                <h3>
-                    Completed
-                </h3>
-
-                <div class="card-number">
-                    <?php echo $completed_bookings; ?>
-                </div>
-
+            <div class="card-number">
+                <?php echo $total_bookings; ?>
             </div>
 
         </div>
 
 
-        <!-- MY BOOKINGS -->
+        <div class="card">
 
-        <h2 class="section-title">
-            My Bookings
-        </h2>
+            <div class="card-icon">⏳</div>
 
+            <h3>Pending Bookings</h3>
+
+            <div class="card-number">
+                <?php echo $pending_bookings; ?>
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-icon">✅</div>
+
+            <h3>Completed Bookings</h3>
+
+            <div class="card-number">
+                <?php echo $completed_bookings; ?>
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- MY BOOKINGS -->
+
+    <section>
+
+        <div class="section-heading">
+
+            <h2>My Bookings</h2>
+
+            <p>
+                Review your bookings and their current status.
+            </p>
+
+        </div>
 
         <div class="booking-area">
 
-            <?php if (mysqli_num_rows($result) > 0) { ?>
+            <?php if ($total_bookings > 0): ?>
 
-                <table class="booking-table">
+                <!-- DESKTOP TABLE -->
 
-                    <tr>
+                <div class="desktop-bookings">
 
-                        <th>Service</th>
-                        <th>Date</th>
-                        <th>Time</th>
-                        <th>Status</th>
+                    <table class="booking-table">
 
-                    </tr>
+                        <thead>
+                            <tr>
+                                <th>Service</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            <?php foreach ($bookings as $booking): ?>
+
+                                <?php
+                                    $status = $booking["status"] ?? "";
+                                    $status_class = dashboard_status_class($status);
+                                ?>
+
+                                <tr>
+
+                                    <td>
+                                        <?php echo dashboard_e($booking["service_name"] ?: "Service unavailable"); ?>
+                                    </td>
+
+                                    <td>
+                                        <?php echo dashboard_e($booking["booking_date"]); ?>
+                                    </td>
+
+                                    <td>
+                                        <?php echo dashboard_e($booking["booking_time"]); ?>
+                                    </td>
+
+                                    <td>
+                                        <span class="status <?php echo $status_class; ?>">
+                                            <?php echo dashboard_e($status); ?>
+                                        </span>
+                                    </td>
+
+                                </tr>
+
+                            <?php endforeach; ?>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
 
 
-                    <?php while ($booking = mysqli_fetch_assoc($result)) { ?>
+                <!-- MOBILE BOOKING CARDS -->
 
-                        <tr>
+                <div class="mobile-bookings">
 
-                            <td>
-                                <?php echo htmlspecialchars($booking["service_name"] ?? "Service"); ?>
-                            </td>
+                    <?php foreach ($bookings as $booking): ?>
 
-                            <td>
-                                <?php echo htmlspecialchars($booking["booking_date"]); ?>
-                            </td>
+                        <?php
+                            $status = $booking["status"] ?? "";
+                            $status_class = dashboard_status_class($status);
+                            $booking_id = (int)$booking["id"];
+                        ?>
 
-                            <td>
-                                <?php echo htmlspecialchars($booking["booking_time"]); ?>
-                            </td>
+                        <article class="mobile-booking-card">
 
-                            <td>
+                            <div class="mobile-booking-header">
 
-                                <span class="status">
-                                    <?php echo htmlspecialchars($booking["status"]); ?>
+                                <strong>
+                                    Booking #<?php echo $booking_id; ?>
+                                </strong>
+
+                                <span class="status <?php echo $status_class; ?>">
+                                    <?php echo dashboard_e($status); ?>
                                 </span>
 
-                            </td>
+                            </div>
 
-                        </tr>
+                            <table class="mobile-booking-details">
 
-                    <?php } ?>
+                                <tbody>
 
-                </table>
+                                    <tr>
+                                        <th scope="row">Service</th>
+                                        <td>
+                                            <?php echo dashboard_e($booking["service_name"] ?: "Service unavailable"); ?>
+                                        </td>
+                                    </tr>
 
-            <?php } else { ?>
+                                    <tr>
+                                        <th scope="row">Date</th>
+                                        <td>
+                                            <?php echo dashboard_e($booking["booking_date"]); ?>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <th scope="row">Time</th>
+                                        <td>
+                                            <?php echo dashboard_e($booking["booking_time"]); ?>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <th scope="row">Status</th>
+                                        <td>
+                                            <span class="status <?php echo $status_class; ?>">
+                                                <?php echo dashboard_e($status); ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+
+                            </table>
+
+                        </article>
+
+                    <?php endforeach; ?>
+
+                </div>
+
+            <?php else: ?>
 
                 <div class="no-booking">
 
-                    <p>
-                        You have no bookings yet.
-                    </p>
+                    <p>You have no bookings yet.</p>
 
                     <a href="booking.php" class="booking-btn">
                         Book Your First Service
@@ -472,22 +708,13 @@ $result = mysqli_stmt_get_result($stmt);
 
                 </div>
 
-            <?php } ?>
+            <?php endif; ?>
 
         </div>
 
-    </div>
+    </section>
 
+</main>
 
 </body>
-
 </html>
-
-<?php
-
-mysqli_stmt_close($total_stmt);
-mysqli_stmt_close($pending_stmt);
-mysqli_stmt_close($completed_stmt);
-mysqli_stmt_close($stmt);
-
-?>

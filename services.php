@@ -1,15 +1,22 @@
-```php
+
 <?php
+
 session_start();
+
+/* LOGIN CHECK */
 
 if (!isset($_SESSION["user_id"])) {
     header("Location: user/login.php?redirect=../services.php");
     exit();
 }
 
-require_once "includes/db_connect.php";
+/* DATABASE CONNECTION */
+
+require_once __DIR__ . "/includes/db_connect.php";
 
 /** @var mysqli $conn */
+
+/* LOAD ACTIVE SERVICES */
 
 $sql = "SELECT id, name, description, price, category
         FROM services
@@ -17,391 +24,423 @@ $sql = "SELECT id, name, description, price, category
         ORDER BY id DESC";
 
 $result = mysqli_query($conn, $sql);
+
+/* SAFE OUTPUT */
+
+function service_e($value) {
+    return htmlspecialchars(
+        (string)($value ?? ""),
+        ENT_QUOTES,
+        "UTF-8"
+    );
+}
+
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
 
-    <title>Services | ServiceHub</title>
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
 
-    <style>
+<title>Services | ServiceHub</title>
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
+<style>
 
-        body {
-            background: #f8f9fc;
-            color: #222;
-        }
+/* GENERAL */
 
-        /* Navbar */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
 
-        nav {
-            background: #111827;
-            padding: 18px 7%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+html,
+body {
+    width: 100%;
+    max-width: 100%;
+}
 
-        .logo {
-            color: white;
-            font-size: 28px;
-            font-weight: bold;
-        }
+body {
+    background: #f8f9fc;
+    color: #222;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
 
-        .logo span {
-            color: #38bdf8;
-        }
+/* PAGE HEADER */
 
-        nav ul {
-            list-style: none;
-            display: flex;
-            gap: 28px;
-            align-items: center;
-        }
+.page-header {
+    background: linear-gradient(135deg, #eef7ff, #ffffff);
+    text-align: center;
+    padding: 70px 20px;
+}
 
-        nav ul li a {
-            color: white;
-            text-decoration: none;
-            font-size: 16px;
-        }
+.page-header h1 {
+    font-size: 45px;
+    margin-bottom: 15px;
+    color: #111827;
+}
 
-        nav ul li a:hover {
-            color: #38bdf8;
-        }
+.page-header h1 span {
+    color: #0284c7;
+}
 
-        .login-btn {
-            border: 1px solid #38bdf8;
-            padding: 9px 18px;
-            border-radius: 6px;
-        }
+.page-header p {
+    color: #64748b;
+    font-size: 18px;
+    line-height: 1.7;
+    max-width: 650px;
+    margin: 0 auto;
+}
 
-        /* Page Header */
+/* SERVICES SECTION */
 
-        .page-header {
-            background: linear-gradient(135deg, #eef7ff, #ffffff);
-            text-align: center;
-            padding: 70px 20px;
-        }
+.services-section {
+    padding: 70px 7%;
+    width: 100%;
+}
 
-        .page-header h1 {
-            font-size: 45px;
-            margin-bottom: 15px;
-        }
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 25px;
+}
 
-        .page-header h1 span {
-            color: #0284c7;
-        }
+/* SERVICE CARD */
 
-        .page-header p {
-            color: #666;
-            font-size: 18px;
-        }
+.service-card {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    transition: transform 0.3s, box-shadow 0.3s;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
 
-        /* Services */
+.service-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.1);
+}
 
-        .services-section {
-            padding: 70px 7%;
-        }
+.service-icon {
+    font-size: 45px;
+    margin-bottom: 15px;
+}
 
-        .services-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 25px;
-        }
+.service-card h2 {
+    font-size: 23px;
+    margin-bottom: 15px;
+    color: #0f172a;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
 
-        .service-card {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-            transition: 0.3s;
-        }
+.service-card p {
+    color: #64748b;
+    line-height: 1.7;
+    margin-bottom: 20px;
+    font-size: 15px;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+}
 
-        .service-card:hover {
-            transform: translateY(-5px);
-        }
+/* PRICE */
 
-        .service-icon {
-            font-size: 45px;
-            margin-bottom: 15px;
-        }
+.price {
+    font-weight: bold;
+    margin-top: auto;
+    margin-bottom: 22px;
+    color: #0f172a;
+    font-size: 17px;
+    overflow-wrap: anywhere;
+}
 
-        .service-card h2 {
-            font-size: 24px;
-            margin-bottom: 15px;
-        }
+/* REQUEST BUTTON */
 
-        .service-card p {
-            color: #666;
-            line-height: 1.6;
-            margin-bottom: 15px;
-        }
+.request-btn {
+    display: inline-block;
+    background: #0284c7;
+    color: white;
+    text-decoration: none;
+    padding: 13px 22px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 14px;
+    transition: background 0.2s;
+    max-width: 100%;
+    text-align: center;
+}
 
-        .price {
-            font-weight: bold;
-            margin-bottom: 20px;
-            color: #222;
-        }
+.request-btn:hover {
+    background: #0369a1;
+}
 
-        .request-btn {
-            display: inline-block;
-            background: #0284c7;
-            color: white;
-            text-decoration: none;
-            padding: 11px 22px;
-            border-radius: 6px;
-            font-weight: bold;
-        }
+.request-btn:focus-visible {
+    outline: 3px solid #38bdf8;
+    outline-offset: 3px;
+}
 
-        .request-btn:hover {
-            background: #0369a1;
-        }
+/* EMPTY STATE */
 
-        .no-services {
-            text-align: center;
-            color: #666;
-            font-size: 18px;
-            padding: 40px;
-            background: white;
-            border-radius: 12px;
-        }
+.no-services {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #64748b;
+    font-size: 17px;
+    line-height: 1.7;
+    padding: 45px 25px;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
 
-        /* Footer */
+/* FOOTER */
 
-        footer {
-            background: #111827;
-            color: white;
-            text-align: center;
-            padding: 25px;
-            margin-top: 20px;
-        }
+footer {
+    background: #111827;
+    color: white;
+    text-align: center;
+    padding: 25px 15px;
+    margin-top: 20px;
+    font-size: 14px;
+}
 
-        /* Responsive */
+/* TABLET */
 
-        @media (max-width: 900px) {
+@media (max-width: 1000px) {
 
-            .services-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
+    .services-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+    }
 
-        }
+    .services-section {
+        padding: 55px 5%;
+    }
 
-        @media (max-width: 600px) {
+}
 
-            nav {
-                flex-direction: column;
-                gap: 15px;
-            }
+/* MOBILE */
 
-            nav ul {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
+@media (max-width: 600px) {
 
-            .services-grid {
-                grid-template-columns: 1fr;
-            }
+    .page-header {
+        padding: 48px 18px;
+    }
 
-            .page-header h1 {
-                font-size: 36px;
-            }
+    .page-header h1 {
+        font-size: 34px;
+    }
 
-        }
+    .page-header p {
+        font-size: 16px;
+    }
 
-    </style>
+    .services-section {
+        padding: 35px 16px 50px;
+    }
+
+    .services-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 20px;
+    }
+
+    .service-card {
+        padding: 27px 21px;
+        border-radius: 12px;
+    }
+
+    .service-card h2 {
+        font-size: 21px;
+    }
+
+    .service-card p {
+        font-size: 14px;
+    }
+
+    .price {
+        font-size: 16px;
+    }
+
+    .request-btn {
+        width: 100%;
+        padding: 14px;
+    }
+
+    footer {
+        padding: 22px 15px;
+    }
+
+}
+
+@media (max-width: 360px) {
+
+    .page-header h1 {
+        font-size: 30px;
+    }
+
+    .service-card {
+        padding: 24px 16px;
+    }
+
+}
+
+</style>
 
 </head>
 
 <body>
 
+<!-- COMMON NAVBAR -->
 
-    <!-- Navbar -->
-
-    <nav>
-
-        <div class="logo">
-            Service<span>Hub</span>
-        </div>
-
-        <ul>
-
-            <li>
-                <a href="index.php">Home</a>
-            </li>
-
-            <li>
-                <a href="services.php">Services</a>
-            </li>
-
-            <li>
-                <a href="about.php">About</a>
-            </li>
-
-            <li>
-                <a href="index.php#how-it-works">How It Works</a>
-            </li>
-
-            <li>
-                <a href="contact.php">Contact</a>
-            </li>
+<?php require __DIR__ . "/includes/navbar.php"; ?>
 
 
-            <?php if (isset($_SESSION["user_id"])) { ?>
+<!-- PAGE HEADER -->
 
-                <li>
-                    <a href="user/dashboard.php">
-                        Dashboard
-                    </a>
-                </li>
+<section class="page-header">
 
-                <li>
-                    <a href="includes/logout.php" class="login-btn">
-                        Logout
-                    </a>
-                </li>
+    <h1>
+        Our <span>Services</span>
+    </h1>
 
-            <?php } else { ?>
+    <p>
+        Explore professional services available
+        through ServiceHub.
+    </p>
 
-                <li>
-                    <a href="user/login.php" class="login-btn">
-                        Login
-                    </a>
-                </li>
-
-                <li>
-                    <a href="user/register.php">
-                        Register
-                    </a>
-                </li>
-
-            <?php } ?>
-
-        </ul>
-
-    </nav>
+</section>
 
 
-    <!-- Page Header -->
+<!-- SERVICES SECTION -->
 
-    <section class="page-header">
+<main class="services-section">
 
-        <h1>
-            Our <span>Services</span>
-        </h1>
+    <div class="services-grid">
 
-        <p>
-            Explore professional services available through ServiceHub.
-        </p>
+        <?php if ($result && mysqli_num_rows($result) > 0): ?>
 
-    </section>
+            <?php while ($row = mysqli_fetch_assoc($result)): ?>
 
+                <?php
 
-    <!-- Services -->
+                $name = service_e($row["name"]);
+                $description = service_e($row["description"]);
+                $price = service_e($row["price"]);
+                $category = strtolower(
+                    (string)($row["category"] ?? "")
+                );
 
-    <section class="services-section">
+                /* SERVICE ICONS */
 
-        <div class="services-grid">
+                if (strpos($category, "web") !== false) {
 
-            <?php
+                    $icon = "💻";
 
-            if ($result && mysqli_num_rows($result) > 0) {
+                } elseif (strpos($category, "graphic") !== false) {
 
-                while ($row = mysqli_fetch_assoc($result)) {
+                    $icon = "🎨";
 
-                    $name = htmlspecialchars($row["name"]);
-                    $description = htmlspecialchars($row["description"]);
-                    $price = htmlspecialchars($row["price"]);
-                    $category = strtolower($row["category"]);
+                } elseif (
+                    strpos($category, "ui") !== false ||
+                    strpos($category, "ux") !== false
+                ) {
 
-                    /* Service icons */
+                    $icon = "📱";
 
-                    if (strpos($category, "web") !== false) {
-                        $icon = "💻";
-                    } elseif (strpos($category, "graphic") !== false) {
-                        $icon = "🎨";
-                    } elseif (strpos($category, "ui") !== false || strpos($category, "ux") !== false) {
-                        $icon = "📱";
-                    } elseif (strpos($category, "marketing") !== false) {
-                        $icon = "📢";
-                    } elseif (strpos($category, "writing") !== false || strpos($category, "content") !== false) {
-                        $icon = "✍️";
-                    } elseif (strpos($category, "support") !== false || strpos($category, "it") !== false) {
-                        $icon = "🛠️";
-                    } else {
-                        $icon = "⭐";
-                    }
+                } elseif (strpos($category, "marketing") !== false) {
 
-            ?>
+                    $icon = "📢";
 
-                    <div class="service-card">
+                } elseif (
+                    strpos($category, "writing") !== false ||
+                    strpos($category, "content") !== false
+                ) {
 
-                        <div class="service-icon">
-                            <?php echo $icon; ?>
-                        </div>
+                    $icon = "✍️";
 
-                        <h2>
-                            <?php echo $name; ?>
-                        </h2>
+                } elseif (
+                    strpos($category, "support") !== false ||
+                    strpos($category, "it") !== false
+                ) {
 
-                        <p>
-                            <?php echo $description; ?>
-                        </p>
+                    $icon = "🛠️";
 
-                        <div class="price">
-                            Starting from $<?php echo $price; ?>
-                        </div>
+                } else {
 
-                        <a
-                            href="user/booking.php?service_id=<?php echo $row["id"]; ?>"
-                            class="request-btn"
-                        >
-                            Request Service
-                        </a>
-
-                    </div>
-
-            <?php
+                    $icon = "⭐";
 
                 }
 
-            } else {
+                ?>
 
-            ?>
+                <article class="service-card">
 
-                <div class="no-services">
-                    No services are currently available.
-                </div>
+                    <div class="service-icon" aria-hidden="true">
+                        <?php echo $icon; ?>
+                    </div>
 
-            <?php } ?>
+                    <h2>
+                        <?php echo $name; ?>
+                    </h2>
 
-        </div>
+                    <p>
+                        <?php echo $description; ?>
+                    </p>
 
-    </section>
+                    <div class="price">
+                        Starting from $<?php echo $price; ?>
+                    </div>
+
+                    <a
+                        href="user/booking.php?service_id=<?php echo (int)$row["id"]; ?>"
+                        class="request-btn"
+                    >
+                        Request Service
+                    </a>
+
+                </article>
+
+            <?php endwhile; ?>
+
+        <?php else: ?>
+
+            <div class="no-services">
+                No services are currently available.
+            </div>
+
+        <?php endif; ?>
+
+    </div>
+
+</main>
 
 
-    <!-- Footer -->
+<!-- FOOTER -->
 
-    <footer>
+<footer>
 
-        <p>
-            © 2026 ServiceHub. All Rights Reserved.
-        </p>
+    <p>
+        &copy; 2026 ServiceHub. All Rights Reserved.
+    </p>
 
-    </footer>
-
+</footer>
 
 </body>
+
 </html>
-```
+
 
